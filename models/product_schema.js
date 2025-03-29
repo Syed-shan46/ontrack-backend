@@ -8,7 +8,7 @@ const productSchema = new Schema({
     price: { type: Number, required: true },
     description: { type: String, required: true },
     isAvailable: { type: Boolean, default: true },
-    category: { type: String, required: true },
+    category: { type: mongoose.Types.ObjectId, ref: "Category", required: true }, // Reference to Category model
 }, { timestamps: true });
 
 const Product = mongoose.model("Product", productSchema);
