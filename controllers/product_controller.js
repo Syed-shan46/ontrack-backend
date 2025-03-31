@@ -1,5 +1,4 @@
 const Product = require("../models/product_schema");
-const Category = require("../models/category_schema");
 const mongoose = require("mongoose");
 
 exports.createProduct = async (req, res) => {
@@ -20,27 +19,34 @@ exports.createProduct = async (req, res) => {
     }
 };
 
-exports.getProductsByCategory = async (req, res) => {
+// ✅ Get products by category and user
+exports.getProductsByCategoryAndUser = async (req, res) => {
     try {
-        const { name } = req.params;
+        const { categoryId, userId } = req.params;
 
-        // Find the category by name
-        const category = await Category.findOne({ name: name });
-
-        console.log("Category Found:", category);
-
-        if (!category) {
-            return res.status(404).json({ message: "Category not found" });
+        // Validate categoryId and userId
+        if (!mongoose.isValidObjectId(categoryId) || !mongoose.isValidObjectId(userId)) {
+            return res.status(400).json({ message: "Invalid category ID or user ID" });
         }
 
-        // Find products using the category ID
-        const products = await Product.find({ category: category._id });
+        // Find products that match both category and user
+        const products = await Product.find({
+            category: categoryId,
+            userId: userId,
+        })
+        .populate('category', 'name') // Optional: Populates category name
+        .populate('userId', 'name email'); // Optional: Populates user details
 
-        console.log("Products Found:", products);
+        if (products.length === 0) {
+            return res.status(404).json({ message: "No products found for this category and user." });
+        }
 
         res.status(200).json({ products });
     } catch (error) {
         res.status(500).json({ message: "Error fetching products", error: error.message });
     }
 };
+
+
+
 
