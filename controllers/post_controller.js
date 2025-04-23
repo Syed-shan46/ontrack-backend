@@ -3,11 +3,11 @@ const Post = require('../models/post_shema');
 // ✅ Create a new post
 exports.createPost = async (req, res) => {
     try {
-        const { caption, author, tags, image , allowComments} = req.body;
-        
+        const { caption, author, tags, image, allowComments } = req.body;
+
         const post = new Post({ caption, author, tags, image, allowComments: allowComments ?? true });
         await post.save();
-        
+
         res.status(201).json({ message: "Post created successfully", post });
     } catch (error) {
         console.error("Error creating post:", error);
@@ -40,10 +40,23 @@ exports.getPostById = async (req, res) => {
     }
 };
 
+// get post by user id
+// ✅ Get posts by user ID
+exports.getPostsByUser = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const posts = await Post.find({ author: userId }).populate('author', 'name').sort({ createdAt: -1 });
+        res.status(200).json(posts);
+    } catch (error) {
+        console.error("Error fetching posts by user:", error);
+        res.status(500).json({ message: "Error fetching posts by user", error: error.message });
+    }
+}
+
 // ✅ Update a post
 exports.updatePost = async (req, res) => {
     try {
-        const {  content, tags, image } = req.body;
+        const { content, tags, image } = req.body;
         const updatedPost = await Post.findByIdAndUpdate(req.params.id, { title, content, tags, image }, { new: true });
 
         if (!updatedPost) {

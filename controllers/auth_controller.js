@@ -58,6 +58,8 @@ const createUser = async (req, res) => {
         //     user: { ...newUser._doc, uid: newUser._id }  // Send _id as uid
         // });
     } catch (error) {
+        // show error in console
+        console.error("Error creating user:", error);
         res.status(500).json({ message: "Error creating user", error: error.message });
     }
 };

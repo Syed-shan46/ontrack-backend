@@ -9,16 +9,21 @@ const productRoutes = require('./routes/product_routes');
 const resetPasswordRoutes = require('./routes/reset_password_routes');
 const postRoutes = require('./routes/post_routes');
 const storyRoutes = require('./routes/story_routes');
+const bannerRoutes = require('./routes/banner_routes');
+const aboutRoutes = require('./routes/about_routes');
 const app = express();
 
 // Middleware to parse JSON bodies
 app.use(express.json());
-app.use("/api/users",userRoutes);
-app.use("/api/categories",categoryRoutes);
-app.use("/api/products",productRoutes);
-app.use("/api/reset-password",resetPasswordRoutes);
-app.use("/api/posts",postRoutes);
-app.use("/api/stories",storyRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/categories", categoryRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/reset-password", resetPasswordRoutes);
+app.use("/api/posts", postRoutes);
+app.use("/api/stories", storyRoutes);
+app.use("/api/banners", bannerRoutes);
+app.use('/api/about', aboutRoutes);
+
 app.use(cors());
 
 // Start the server 
@@ -30,7 +35,6 @@ app.listen(PORT, () => {
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, {
   serverSelectionTimeoutMS: 30000, // Increase timeout to 30 sec
-  })
+})
   .then(() => console.log('MongoDB connected'))
-  .catch((err) => console.error('MongoDB connection error:', err),); 
-  
+  .catch((err) => console.error('MongoDB connection error:', err),);
