@@ -15,7 +15,7 @@ const userSchema = new Schema({
 
     photoUrl: {
         type: String,
-        default: "" 
+        default: ""
     },
 
     username: {
@@ -26,13 +26,13 @@ const userSchema = new Schema({
 
     location: { type: String, required: false, default: "" },
     bio: { type: String, required: false, default: "" },
-    
+
 
     followers: { type: [String], default: [] },
 
     following: { type: [String], default: [] }
 
-},{ timestamps: true });
+}, { timestamps: true });
 
 // Create the User model
 const User = mongoose.model('User', userSchema);

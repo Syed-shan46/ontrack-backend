@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
-const userRoutes = require('./routes/auth_routes');
+const userRoutes = require('./routes/user_routes');
 const categoryRoutes = require('./routes/category_routes');
 const productRoutes = require('./routes/product_routes');
 const resetPasswordRoutes = require('./routes/reset_password_routes');
@@ -11,6 +11,7 @@ const postRoutes = require('./routes/post_routes');
 const storyRoutes = require('./routes/story_routes');
 const bannerRoutes = require('./routes/banner_routes');
 const aboutRoutes = require('./routes/about_routes');
+const authorRoutes = require('./routes/author_routes');
 const app = express();
 
 // Middleware to parse JSON bodies
@@ -23,6 +24,7 @@ app.use("/api/posts", postRoutes);
 app.use("/api/stories", storyRoutes);
 app.use("/api/banners", bannerRoutes);
 app.use('/api/about', aboutRoutes);
+app.use('/api/author/', authorRoutes);
 
 app.use(cors());
 

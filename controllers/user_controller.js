@@ -392,4 +392,4 @@ const searchUser = async (req, res) => {
 
 
 
-module.exports = { createUser, getUserByUid, updateUser, deleteUser, followUser, unfollowUser, loginUser, changeUserDetails, verifyUserOTP, checkusername, sendSms, verifySms , searchUser};
+module.exports = { createUser, getUserByUid, updateUser, deleteUser, followUser, unfollowUser, loginUser, changeUserDetails, verifyUserOTP, checkusername, sendSms, verifySms, searchUser };

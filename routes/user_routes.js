@@ -1,5 +1,5 @@
 const express = require("express");
-const { createUser, getUserByUid, updateUser, deleteUser, followUser, unfollowUser, loginUser, changeUserDetails, verifyUserOTP, checkusername, sendSms, searchUser } = require("../controllers/auth_controller");
+const { createUser, getUserByUid, updateUser, deleteUser, followUser, unfollowUser, loginUser, changeUserDetails, verifyUserOTP, checkusername, sendSms, searchUser } = require("../controllers/user_controller");
 const { verifyOTP } = require("../controllers/otp_controller");
 
 const router = express.Router();
@@ -13,7 +13,7 @@ router.delete("/:uid", deleteUser);                      // Delete user
 router.post("/follow", followUser);                      // Follow a user    
 router.post("/unfollow", unfollowUser);                  // Unfollow a user
 router.post("/login", loginUser);                        // Login user
-router.get("/check-username/:username'",checkusername); // Check if username is available
+router.get("/check-username/:username'", checkusername); // Check if username is available
 router.post("/send-otp", sendSms);                       // Send OTP to user
 router.post("/verify-otp", verifyOTP);                   // Verify OTP
 router.get("/search", searchUser);                       // Search users
