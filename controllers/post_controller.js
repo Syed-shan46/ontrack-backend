@@ -40,7 +40,7 @@ exports.getPostById = async (req, res) => {
     }
 };
 
-// get post by user id
+
 // ✅ Get posts by user ID
 exports.getPostsByUser = async (req, res) => {
     try {
