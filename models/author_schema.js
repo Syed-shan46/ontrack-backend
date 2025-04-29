@@ -19,6 +19,37 @@ const authorSchema = new Schema({
         required: true
     },
 
+    // following a author to author:
+    followingAuthors: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Author',
+        default: []
+    }],
+
+    // Following a Author to res
+    followingUsers: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: []
+    }],
+
+    // Followers (only authors can follow authors)
+    followers: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Author',
+        default: []
+    }],
+
+    followingCount: {
+        type: Number,
+        default: 0,
+    },
+
+    followerCount: {
+        type: Number,
+        default: 0,
+    },
+
     profilePicture: {
         type: String // URL to Cloudinary or local path
     },

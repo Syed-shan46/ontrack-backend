@@ -27,8 +27,11 @@ const userSchema = new Schema({
     location: { type: String, required: false, default: "" },
     bio: { type: String, required: false, default: "" },
 
-
-    followers: { type: [String], default: [] },
+    followers: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Author',
+        default: []
+    }],
 
     following: { type: [String], default: [] }
 

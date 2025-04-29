@@ -8,12 +8,12 @@ const otpStorage = new Map();
 
 exports.createAuthor = async (req, res) => {
     try {
-        const { email, profilePicture, username, password, bio, topics, socialLinks } = req.body;
+        const { email, profilePicture, username, password, bio, topics, socialLinks, following } = req.body;
 
         // Check if the user already exists
         const existingUser = await Author.findOne({ email });
         if (existingUser) {
-            return res.status(400).json({ message: "User already exists" });
+            return res.status(400).json({ message: "Email is already registered. Please use a different email." });
         }
         // ✅ Check if username already exists
         const existingUsername = await Author.findOne({ username });
@@ -64,6 +64,7 @@ exports.verifyAuthorOTP = async (req, res) => {
             profilePicture: storedOtpData.userData.profilePicture || '',
             username: storedOtpData.userData.username,
             bio: storedOtpData.userData.bio,
+            following: [],
             topics: storedOtpData.userData.topics || [],
             socialLinks: storedOtpData.userData.socialLinks || {}
         });

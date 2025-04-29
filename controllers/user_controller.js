@@ -1,4 +1,5 @@
 const User = require("../models/user_schema");
+const Author = require('../models/author_schema');
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -11,7 +12,7 @@ const otpStorage = new Map();
 // Create a new user
 const createUser = async (req, res) => {
     try {
-        const { email, photoUrl, username, location, bio, followers, following, password } = req.body;
+        const { email, photoUrl, username, location, bio, followers, following, password, followerCount, followingCount } = req.body;
 
         // Check if the user already exists
         const existingUser = await User.findOne({ email });
@@ -32,7 +33,7 @@ const createUser = async (req, res) => {
 
         // ✅ Generate OTP and store it temporarily
         const otp = generateOTP();
-        otpStorage.set(email, { otp, userData: { email, password, photoUrl, username, location, bio, followers, following }, expiresAt: Date.now() + 10 * 60 * 1000 });
+        otpStorage.set(email, { otp, userData: { email, password, photoUrl, username, location, bio, followerCount, followingCount, followers, following }, expiresAt: Date.now() + 10 * 60 * 1000 });
 
         // ✅ Send OTP via email
         await sendOTP(email, otp);
@@ -86,6 +87,8 @@ const verifyUserOTP = async (req, res) => {
             username: storedOtpData.userData.username,
             location: '',
             bio: '',
+            followerCount: 0,
+            followingCount: 0,
             followers: storedOtpData.userData.followers || [],
             following: storedOtpData.userData.following || [],
         });
@@ -213,74 +216,194 @@ const deleteUser = async (req, res) => {
 // Follow a user
 const followUser = async (req, res) => {
     try {
-        const { currentUserId, targetUserId } = req.body;
+        const { currentAuthorId, targetId, targetType } = req.body;
 
-        if (!mongoose.Types.ObjectId.isValid(currentUserId) || !mongoose.Types.ObjectId.isValid(targetUserId)) {
-            return res.status(400).json({ message: "Invalid user ID format" });
+        if (!mongoose.Types.ObjectId.isValid(currentAuthorId) || !mongoose.Types.ObjectId.isValid(targetId)) {
+            return res.status(400).json({ message: "Invalid ID format" });
         }
 
-        if (currentUserId === targetUserId) {
+        if (currentAuthorId === targetId) {
             return res.status(400).json({ message: "You cannot follow yourself" });
         }
 
-        const currentUser = await User.findById(new mongoose.Types.ObjectId(currentUserId));
-        const targetUser = await User.findById(new mongoose.Types.ObjectId(targetUserId));
-
-        if (!currentUser || !targetUser) {
-            return res.status(404).json({ message: "User not found" });
+        const currentAuthor = await Author.findById(currentAuthorId);
+        if (!currentAuthor) {
+            return res.status(404).json({ message: "Current author not found" });
         }
 
-        if (targetUser.followers.includes(currentUserId)) {
-            return res.status(400).json({ message: "You are already following this user" });
+        let target;
+        if (targetType === 'User') {
+            target = await User.findById(targetId);
+        } else if (targetType === 'Author') {
+            target = await Author.findById(targetId);
+        } else {
+            return res.status(400).json({ message: "Invalid target type" });
         }
 
-        targetUser.followers.push(currentUserId);
-        currentUser.following.push(targetUserId);
+        if (!target) {
+            return res.status(404).json({ message: "Target not found" });
+        }
 
-        await targetUser.save();
-        await currentUser.save();
+        let alreadyFollowing = false;
 
-        res.status(200).json({ message: "User followed successfully" });
+        // Following logic for User type
+        if (targetType === 'User') {
+            alreadyFollowing = currentAuthor.followingUsers.includes(targetId);
+
+            if (alreadyFollowing) {
+                // Unfollow logic
+                currentAuthor.followingUsers = currentAuthor.followingUsers.filter(id => id.toString() !== targetId);
+                target.followers = target.followers.filter(id => id.toString() !== currentAuthorId);
+                target.followerCount = Math.max(0, target.followerCount - 1); // Decrease follower count on unfollow
+                currentAuthor.followingCount = Math.max(0, currentAuthor.followingCount - 1); // Decrease following count
+            } else {
+                // Follow logic
+                currentAuthor.followingUsers.push(targetId);
+                target.followers.push(currentAuthorId);
+                target.followerCount += 1; // Increase follower count on follow
+                currentAuthor.followingCount += 1; // Increase following count
+            }
+        }
+        // Following logic for Author type
+        else if (targetType === 'Author') {
+            alreadyFollowing = currentAuthor.followingAuthors.includes(targetId);
+
+            if (alreadyFollowing) {
+                // Unfollow logic
+                currentAuthor.followingAuthors = currentAuthor.followingAuthors.filter(id => id.toString() !== targetId);
+                target.followers = target.followers.filter(id => id.toString() !== currentAuthorId);
+                target.followerCount = Math.max(0, target.followerCount - 1); // Decrease follower count on unfollow
+                currentAuthor.followingCount = Math.max(0, currentAuthor.followingCount - 1); // Decrease following count
+            } else {
+                // Follow logic
+                currentAuthor.followingAuthors.push(targetId);
+                target.followers.push(currentAuthorId);
+                target.followerCount += 1; // Increase follower count on follow
+                currentAuthor.followingCount += 1; // Increase following count
+            }
+        }
+
+        // Save updated documents
+        await currentAuthor.save();
+        await target.save();
+
+        res.status(200).json({
+            message: `${alreadyFollowing ? 'Unfollowed' : 'Followed'} ${targetType.toLowerCase()} successfully`,
+            isFollowing: !alreadyFollowing,
+            followersCount: target.followers.length,
+            followingCount: currentAuthor.followingCount,
+        });
     } catch (error) {
-        res.status(500).json({ message: "Error following user", error: error.message });
+        res.status(500).json({ message: "Error following/unfollowing", error: error.message });
     }
 };
 
-// Unfollow a user
-const unfollowUser = async (req, res) => {
-    try {
-        const { currentUserId, targetUserId } = req.body;
 
-        if (!mongoose.Types.ObjectId.isValid(currentUserId) || !mongoose.Types.ObjectId.isValid(targetUserId)) {
-            return res.status(400).json({ message: "Invalid user ID format" });
+const checkIsFollowing = async (req, res) => {
+    try {
+        const { currentAuthorId, targetId, targetType } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(currentAuthorId) || !mongoose.Types.ObjectId.isValid(targetId)) {
+            return res.status(400).json({ message: "Invalid ID format" });
         }
 
-        if (currentUserId === targetUserId) {
+        const currentAuthor = await Author.findById(currentAuthorId);
+        if (!currentAuthor) {
+            return res.status(404).json({ message: "Current author not found" });
+        }
+
+        let isFollowing = false;
+
+        if (targetType === 'User') {
+            isFollowing = currentAuthor.followingUsers.includes(targetId);
+        } else if (targetType === 'Author') {
+            isFollowing = currentAuthor.followingAuthors.includes(targetId);
+        } else {
+            return res.status(400).json({ message: "Invalid target type" });
+        }
+
+        res.status(200).json({ isFollowing });
+    } catch (error) {
+        res.status(500).json({ message: "Error checking follow status", error: error.message });
+    }
+};
+
+
+
+// Unfollow user
+const unfollowUser = async (req, res) => {
+    try {
+        const { currentAuthorId, targetId, targetType } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(currentAuthorId) || !mongoose.Types.ObjectId.isValid(targetId)) {
+            return res.status(400).json({ message: "Invalid ID format" });
+        }
+
+        if (currentAuthorId === targetId) {
             return res.status(400).json({ message: "You cannot unfollow yourself" });
         }
 
-        const currentUser = await User.findById(new mongoose.Types.ObjectId(currentUserId));
-        const targetUser = await User.findById(new mongoose.Types.ObjectId(targetUserId));
-
-        if (!currentUser || !targetUser) {
-            return res.status(404).json({ message: "User not found" });
+        const currentAuthor = await Author.findById(currentAuthorId);
+        if (!currentAuthor) {
+            return res.status(404).json({ message: "Current author not found" });
         }
 
-        if (!targetUser.followers.includes(currentUserId)) {
-            return res.status(400).json({ message: "You are not following this user" });
+        let target;
+        if (targetType === 'User') {
+            target = await User.findById(targetId);
+        } else if (targetType === 'Author') {
+            target = await Author.findById(targetId);
+        } else {
+            return res.status(400).json({ message: "Invalid target type" });
         }
 
-        targetUser.followers = targetUser.followers.filter(id => id !== currentUserId);
-        currentUser.following = currentUser.following.filter(id => id !== targetUserId);
+        if (!target) {
+            return res.status(404).json({ message: "Target not found" });
+        }
 
-        await targetUser.save();
-        await currentUser.save();
+        let wasFollowing = false;
 
-        res.status(200).json({ message: "User unfollowed successfully" });
+        if (targetType === 'User') {
+            wasFollowing = currentAuthor.followingUsers.includes(targetId);
+
+            if (wasFollowing) {
+                currentAuthor.followingUsers = currentAuthor.followingUsers.filter(
+                    id => id.toString() !== targetId
+                );
+                target.followers = target.followers.filter(
+                    id => id.toString() !== currentAuthorId
+                );
+            }
+        } else if (targetType === 'Author') {
+            wasFollowing = currentAuthor.followingAuthors.includes(targetId);
+
+            if (wasFollowing) {
+                currentAuthor.followingAuthors = currentAuthor.followingAuthors.filter(
+                    id => id.toString() !== targetId
+                );
+                target.followers = target.followers.filter(
+                    id => id.toString() !== currentAuthorId
+                );
+            }
+        }
+
+        if (!wasFollowing) {
+            return res.status(400).json({ message: "You are not following this user/author" });
+        }
+
+        await currentAuthor.save();
+        await target.save();
+
+        res.status(200).json({
+            message: `Unfollowed ${targetType.toLowerCase()} successfully`,
+            isFollowing: false
+        });
+
     } catch (error) {
-        res.status(500).json({ message: "Error unfollowing user", error: error.message });
+        res.status(500).json({ message: "Error unfollowing", error: error.message });
     }
 };
+
 
 const loginUser = async (req, res) => {
     try {
@@ -370,18 +493,27 @@ const searchUser = async (req, res) => {
             return res.status(400).json({ message: "Query parameter is required" });
         }
 
-        console.log("Query:", query); // Debugging
+        console.log("Search query:", query);
 
-        const users = await User.find(
-            { username: { $regex: query, $options: "i" } },
-            "_id username photoUrl" // ✅ Only return necessary fields
+        const authors = await Author.find(
+            { username: { $regex: query, $options: "i" } }
         );
 
-        console.log("Users:", users); // Debugging
 
-        res.status(200).json(users);
+        const restaurants = await User.find(
+            { username: { $regex: query, $options: "i" } },
+            "_id username photoUrl"
+        );
+
+        console.log("Authors found:", authors.length);
+        console.log("Restaurants found:", restaurants.length);
+
+        res.status(200).json({
+            authors,
+            restaurants,
+        });
     } catch (error) {
-        console.error("Error:", error);
+        console.error("Error during search:", error);
         res.status(500).json({ message: "Error searching users", error: error.message });
     }
 };
@@ -392,4 +524,4 @@ const searchUser = async (req, res) => {
 
 
 
-module.exports = { createUser, getUserByUid, updateUser, deleteUser, followUser, unfollowUser, loginUser, changeUserDetails, verifyUserOTP, checkusername, sendSms, verifySms, searchUser };
+module.exports = { createUser, getUserByUid, updateUser, deleteUser, followUser, unfollowUser, loginUser, changeUserDetails, verifyUserOTP, checkusername, sendSms, verifySms, searchUser, checkIsFollowing };
