@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const mongoose = require('mongoose');
+const Author = require('./models/author_schema');
 const cors = require('cors');
 require('dotenv').config();
 
@@ -36,7 +37,7 @@ app.use("/api/posts", postRoutes);
 app.use("/api/stories", storyRoutes);
 app.use("/api/banners", bannerRoutes);
 app.use('/api/about', aboutRoutes);
-app.use('/api/author/', authorRoutes);
+app.use('/api/author', authorRoutes);
 app.use('/api/blog', blogRoutes);
 
 // Enable CORS
@@ -44,17 +45,27 @@ app.use(cors());
 
 // Socket.io event handling
 io.on("connection", (socket) => {
-  console.log("User connected:", socket.id);
+  console.log("Socket connected:", socket.id);
 
-  socket.on("join", (userId) => {
-    socket.join(userId); // Join the user's room for personalized events
-    console.log(`User ${userId} joined room ${userId}`);
+  socket.on("join", async (userId) => {
+    socket.join(userId);
+    console.log(`User ${userId} joined room`);
+
+    // Emit current data immediately after joining
+    const author = await Author.findById(userId);
+    if (author) {
+      io.to(userId).emit("followUpdate", {
+        followersCount: author.followerCount,
+        followingCount: author.followingCount,
+      });
+    }
   });
 
   socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
+    console.log("Socket disconnected:", socket.id);
   });
 });
+
 
 app.set("io", io); // Make io available in routes/controllers
 

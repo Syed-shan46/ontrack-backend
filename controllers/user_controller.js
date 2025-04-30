@@ -287,6 +287,19 @@ const followUser = async (req, res) => {
         await currentAuthor.save();
         await target.save();
 
+        // ⬇️ ADD THIS SECTION HERE — AFTER saving, BEFORE sending response
+        const io = req.app.get("io");
+
+        // Emit real-time update to currentAuthor (their followingCount changed)
+        io.to(currentAuthorId).emit("followUpdate", {
+            followingCount: currentAuthor.followingCount,
+        });
+
+        // Emit real-time update to target (their followersCount changed)
+        io.to(targetId).emit("followUpdate", {
+            followersCount: target.followerCount,
+        });
+
         res.status(200).json({
             message: `${alreadyFollowing ? 'Unfollowed' : 'Followed'} ${targetType.toLowerCase()} successfully`,
             isFollowing: !alreadyFollowing,

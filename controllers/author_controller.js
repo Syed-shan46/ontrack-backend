@@ -1,4 +1,5 @@
 const Author = require('../models/author_schema');
+const Follow = require('../models/follow_schema');
 const bcrypt = require("bcryptjs");
 const { sendOTP, generateOTP } = require("../utils/otp_helper");
 const jwt = require("jsonwebtoken");
@@ -177,6 +178,68 @@ exports.loginAuthor = async (req, res) => {
         res.status(500).json({ message: "Error logging in", error: error.message });
     }
 };
+
+exports.getAuthorStats = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const author = await Author.findById(id);
+
+        if (!author) {
+            return res.status(404).json({ message: "Author not found" });
+        }
+
+        return res.status(200).json({
+            followersCount: author.followerCount || 0,
+            followingCount: author.followingCount || 0,
+        });
+    } catch (error) {
+        console.error("Error in getAuthorStats:", error.message);
+        return res.status(500).json({ message: "Server error", error: error.message });
+    }
+};
+
+// Get followers of a user/author
+exports.getFollowlist = async (req, res) => {
+    const { authorId } = req.params;
+
+    const author = await Author.findById(authorId)
+        .populate('followingAuthors', 'username email profilePicture bio')
+        .populate('followingUsers');
+
+    if (!author) {
+        return res.status(404).json({ message: 'Author not found' });
+    }
+
+    res.json({
+        followingAuthors: author.followingAuthors,
+        followingUsers: author.followingUsers
+    });
+};
+
+
+// Get followers of an author
+exports.getFollowersList = async (req, res) => {
+    try {
+        const { authorId } = req.params;
+
+        const author = await Author.findById(authorId)
+            .populate('followers', 'username email profilePicture bio');
+
+        if (!author) {
+            return res.status(404).json({ message: 'Author not found' });
+        }
+
+        res.status(200).json({
+            followers: author.followers
+        });
+    } catch (err) {
+        console.error('Error fetching followers:', err);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+
 
 
 

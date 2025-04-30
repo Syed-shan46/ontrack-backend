@@ -54,7 +54,6 @@ const authorSchema = new Schema({
         type: String // URL to Cloudinary or local path
     },
 
-
     bio: {
         type: String
     },
